@@ -140,7 +140,7 @@ esp32_improv:
 
 switch:
   - platform: gpio
-    id: gpio2_off
+    id: bh1750_ground
     pin: GPIO2
     restore_mode: ALWAYS_OFF
   - platform: ld2412
