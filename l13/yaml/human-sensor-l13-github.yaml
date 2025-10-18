@@ -180,12 +180,6 @@ button:
     start_dynamic_background_correction:
       name: LD2412S Start Dynamic Background Correction
       entity_category: config
-      
-select:
-  - platform: ld2412
-    distance_resolution:
-      name: LD2412S Distance Resolution
-      entity_category: config
 
 uart:
   tx_pin: 
