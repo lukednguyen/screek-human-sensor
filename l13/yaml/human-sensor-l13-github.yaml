@@ -5,86 +5,33 @@ esphome:
   name_add_mac_suffix: True
   platformio_options:
     board_build.flash_mode: dio
-    # board_build.f_cpu: 80000000L
   project: 
-    name: Screek.Human_Presence_Sensor
-    version: L13
-  on_boot:
-    - priority: 1000
-      then:
-        - lambda: |-
-            pinMode(2, OUTPUT);
-            digitalWrite(2, LOW);
-            delay(100);
-    - priority: 100
-      then:
-        lambda: |-
-          id(cpu_speed) = ESP.getCpuFreqMHz();
+    name: Screek.Human Sensor L13
+    version: v1.0.0
 
 logger:
-  # level: VERY_VERBOSE
-  # level: DEBUG
 
 preferences:
     flash_write_interval: 5s
 
-external_components:
-  - source:
-      type: git
-      url: https://github.com/screekworkshop/custom_components_support_for_screek_l12
-      ref: main
-    components: [uart, ld2412]
-
 esp32:
   board: lolin_c3_mini
   framework:
-    type: arduino
-    version: 2.0.9
-    platform_version: 6.3.0
-
-globals:
-  - id: cpu_speed
-    type: int
-    restore_value: no
-    initial_value: '0'
-  - id: last_update_ld2450
-    type: unsigned long
-    restore_value: no
-    initial_value: '0'
-  - id: init_zone_publish
-    type: bool
-    restore_value: no
-    initial_value: "false"
-  - id: last_illuminance
-    type: float
-    restore_value: no
-    initial_value: "-1"
+    type: esp-idf
 
 improv_serial:
 
 debug:
   update_interval: 30s
-
-# Enable Home Assistant API
 api:
-  # encryption:
-    # use you own password
-    # key: "b1b1F1ArnSZmIvk7WLL9oG19gjPTCmBP1irQlSlSDGY="
 
 ota:
   - platform: esphome
-    password: "your-ota-password"
 
 safe_mode:
   disabled: true
 
 wifi:
-  # output_power: 15dB
-  power_save_mode: LIGHT
-  # power_save_mode: NONE
-  reboot_timeout: 10min
-  ap:
-    ssid: "HUMAN-SENSOR L13"
 
 captive_portal:
 
@@ -94,182 +41,153 @@ web_server:
 text_sensor:
   - platform: debug
     reset_reason:
-      name: "ESP Reset Reason"
+      name: ESP Reset Reason
       icon: mdi:anchor
       disabled_by_default: True
   - platform: wifi_info
+    ssid:
+      name: ESP Connected SSID
+      icon: mdi:wifi
+      entity_category: diagnostic
+      disabled_by_default: True
     ip_address:
       name: ESP IP Address
-      entity_category: "diagnostic"
-      disabled_by_default: True
       icon: mdi:ip-network
+      entity_category: diagnostic
+      disabled_by_default: True
     mac_address:
       name: ESP MAC
-      entity_category: "diagnostic"
-      icon: mdi:ip-network
+      icon: mdi:wifi
+      entity_category: diagnostic
       disabled_by_default: True
   - platform: ld2412
     version:
-      name: LD2412S FM Version
-      id: ld2412_fm_version
+      name: LD2412S Firmware Version
+      entity_category: diagnostic
     mac_address:
       name: LD2412S Mac
-      id: ld2412_mac
+      entity_category: diagnostic
 
 
 binary_sensor:
   - platform: status
     name: Online
-    id: ink_ha_connected
+    entity_category: diagnostic
   - platform: ld2412
     has_target:
       name: Presence
+      id: presence_status
+      on_press:
+        then:
+          - light.turn_on: presence_led
+      on_release: 
+        then:
+          - light.turn_off: presence_led
     has_moving_target:
       name: Moving Target
     has_still_target:
       name: Still Target
+    dynamic_background_correction_status:
+      name: LD2412S Dynamic Background Correction Status
+      entity_category: diagnostic
 
 sensor:
-  - platform: template
-    name: "ESP CPU Speed"
-    accuracy_decimals: 0
-    icon: mdi:cpu-32-bit
-    unit_of_measurement: Mhz
-    disabled_by_default: True
-    lambda: |-
-      return (id(cpu_speed));
-    entity_category: "diagnostic"
-    update_interval: 600s
-  - platform: template
-    id: sys_esp_temperature
+  - platform: internal_temperature
     name: ESP Temperature
-    lambda: return temperatureRead();
-    unit_of_measurement: °C
-    device_class: TEMPERATURE
-    update_interval: 45s
-    entity_category: "diagnostic"
+    entity_category: diagnostic
   - platform: uptime
     name: ESP Uptime
-    id: sys_uptime
-    update_interval: 60s
-  - platform: wifi_signal 
+    entity_category: diagnostic
+    type:
+      timestamp
+  - platform: wifi_signal
     name: RSSI
-    id: wifi_signal_db
-    update_interval: 60s
-    entity_category: "diagnostic"
-  - platform: template
-    id: esp_memory
-    icon: mdi:memory
-    name: ESP Free Memory
-    lambda: return heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024;
-    unit_of_measurement: 'kB'
-    state_class: measurement
-    entity_category: "diagnostic"
-    update_interval: 60s
+    entity_category: diagnostic
   - platform: ld2412
     moving_distance:
       name : Moving Distance
-      id: moving_distance
     still_distance:
       name: Still Distance
-      id: still_distance
     moving_energy:
-      name: Move Energy
+      name: Moving Energy
     still_energy:
       name: Still Energy
-    luminance:
-      name: LD2412S luminance
-      entity_category: diagnostic
   - platform: bh1750
-    name: "BH1750 Illuminance"
+    name: Illuminance
     address: 0x23
     update_interval: 1s
     
 light:
   - platform: status_led
-    name: sys_status
+    id: sys_status
     pin: 
       number: GPIO13
       ignore_pin_validation_error: True
-    internal: True
     restore_mode: ALWAYS_OFF
-  - platform: binary
-    name: "Red Info Light"
-    output: board_info_ed
-    entity_category: diagnostic
+  - platform: status_led
+    id: presence_led
+    entity_category: config
+    pin: 
+      number: GPIO12
+      ignore_pin_validation_error: True
     restore_mode: ALWAYS_OFF
 
 time:
   - platform: sntp
-    id: time_now
-
-output:
-  - platform: gpio
-    id: board_info_ed
-    pin: 
-      number: GPIO12
-      ignore_pin_validation_error: True
 
 esp32_improv:
   authorizer: none
-  on_start:
-    then:
-      - logger.log: "Improv awaiting authorization/authorized"
-  on_provisioned:
-    then:
-      - logger.log: "Improv provisioned"
-  on_provisioning:
-    then:
-      - logger.log: "Improv provisioning"
-  on_stop:
-    then:
-      - logger.log: "Improv stopped"
-      
+
 switch:
-  - platform: factory_reset
-    name: "L13 Factory Reset" # 或许最好把雷达模块也重新初始化
-    disabled_by_default: True
-    icon: mdi:heart-broken
-    entity_category: diagnostic
+  - platform: gpio
+    id: gpio2_off
+    pin: GPIO2
+    restore_mode: ALWAYS_OFF
+  - platform: ld2412
+    bluetooth: 
+      name: LD2412S BLE Control
+      entity_category: config
+  - platform: template
+    name: Presence Light
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_on:
+      if:
+        condition:
+          binary_sensor.is_on: presence_status
+        then:
+          - light.turn_on: presence_led
+    on_turn_off:
+      - light.turn_off: presence_led
 
 button:
   - platform: restart
-    icon: mdi:power-cycle
-    name: "ESP Reboot"
-    entity_category: diagnostic
-  - platform: template
-    name: "LD2412S BLE Enable"
-    # disabled_by_default: True
-    entity_category: "config"
-    icon: mdi:bluetooth
-    on_press:
-      lambda: |-
-        id(ld2412s_radar) -> ble_control(true);
-  - platform: template
-    name: "LD2412S BLE Disable"
-    # disabled_by_default: True
-    entity_category: "config"
-    icon: mdi:bluetooth-off
-    on_press:
-      lambda: |-
-        id(ld2412s_radar) -> ble_control(false);
-  - platform: template
-    name: "LD2412S Reboot"
-    icon: mdi:radar
-    entity_category: "config"
-    on_press:
-      lambda: |-
-        id(ld2412s_radar) -> reboot();
-  - platform: template
-    name: "LD2412S Factory Reset"
-    icon: mdi:restart
-    entity_category: "config"
-    on_press:
-      - lambda: |-
-          id(ld2412s_radar) -> factoryReset();
+    name: ESP Reboot
+    entity_category: config
+  - platform: factory_reset
+    name: ESP Factory Reset
+    entity_category: config
+    disabled_by_default: True
+  - platform: ld2412
+    restart:
+      name: LD2412S Reboot
+      entity_category: config
+    factory_reset:
+      name: LD2412S Factory Reset
+      entity_category: config
+      disabled_by_default: True
+    start_dynamic_background_correction:
+      name: LD2412S Start Dynamic Background Correction
+      entity_category: config
+      
+select:
+  - platform: ld2412
+    distance_resolution:
+      name: LD2412S Distance Resolution
+      entity_category: config
 
 uart:
-  id: uart_bus
   tx_pin: 
     number: GPIO11
     mode:
@@ -291,4 +209,3 @@ i2c:
   scan: True
 
 ld2412:
-  id: ld2412s_radar
