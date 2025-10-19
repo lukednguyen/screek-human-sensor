@@ -78,8 +78,11 @@ binary_sensor:
       name: Presence
       id: presence_status
       on_press:
-        then:
-          - light.turn_on: presence_led
+        if:
+          condition:
+            switch.is_on: presence_light
+          then:
+            - light.turn_on: presence_led
       on_release: 
         then:
           - light.turn_off: presence_led
@@ -149,6 +152,7 @@ switch:
       entity_category: config
   - platform: template
     name: Presence Light
+    id: presence_light
     entity_category: config
     optimistic: true
     restore_mode: RESTORE_DEFAULT_ON
